@@ -47,6 +47,6 @@ strong_buys_str = ",".join(strong_buys_list)
 
 today = dt.datetime.today().strftime('%Y-%m-%d')
 # save the file into the working directory
-file_name = path_or_buf=workingdirectory +'/output/favoritesStrongBuys'+today+'.txt'
+file_name = path_or_buf=workingdirectory +'/output/StrongBuys'+today+'.txt'
 with open(file_name, "w") as text_file:
     text_file.write(strong_buys_str)
