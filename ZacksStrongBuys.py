@@ -32,15 +32,16 @@ if(len(import_file_name) == 0):
 
 # import the csv stock list
 import_csv_filename = path_or_buf=workingdirectory +'/input/'+ import_file_name
-favorites = []
+symbols = []
 if(util.PathExists(import_csv_filename)):
     favorites_csv = pd.read_csv(import_csv_filename)
-    favorites = favorites_csv['Stocks'] # grab the stocks column, this is the only one and will convert this to a list
+    symbols = favorites_csv['Stocks'] # grab the stocks column, this is the only one and will convert this to a list
 
 results = []
 # print the results for the given stocks
-zacks_info_map = zlist.GetZacksInfoMap(favorites)
-strong_buys_list = zcalc.GetAllZacksRank(favorites, zacks_info_map, 'Strong Buy')
+zacks_info_map, failures = zlist.GetZacksInfoMap(symbols)
+successful_symbols = [symbol for symbol in symbols if symbol not in failures]
+strong_buys_list = zcalc.GetAllZacksRank(successful_symbols, zacks_info_map, 'Strong Buy')
 print('Strong Buys are:\n')
 print(strong_buys_list)
 strong_buys_str = ",".join(strong_buys_list)

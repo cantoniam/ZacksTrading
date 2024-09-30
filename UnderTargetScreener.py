@@ -43,18 +43,26 @@ print("Screener: using " + import_csv_filename + " for symbols")
 symbols = []
 if(util.PathExists(import_csv_filename)):
     symbols_csv = pd.read_csv(import_csv_filename)
-    symbols = symbols_csv['Stocks'] # grab the stocks column, this is the only one and will convert this to a list
+    try:
+        symbols = symbols_csv['Stocks'] # grab the stocks column, this is the only one and will convert this to a list
+    except Exception as e:
+        print("Input file requires a column header of \"Stocks\"" + e)
 
 print("Get Zacks Info Map for symbols")
-info_map = zlist.GetZacksInfoMap(symbols)
+info_map, info_failures = zlist.GetZacksInfoMap(symbols)
 print("Get Zacks Company Report for symbols")
-report_map = zlist.GetZacksCompanyReportMap(symbols)
+successful_info_symbols = [symbol for symbol in symbols if symbol not in info_failures]
+report_map, report_failures = zlist.GetZacksCompanyReportMap(successful_info_symbols)
+successful_symbols = [symbol for symbol in successful_info_symbols if symbol not in report_failures]
+failures = info_failures
+failures.extend(report_failures)
+if len(failures) > 0:
+    print('Failed to retrieve valid data for: ')
+    print(failures)
 
-valid_ranks =["Strong Buy","Buy"]
-print(",".join(valid_ranks))
-print("Run checks on symbols for given valid rankings")
+valid_ranks =["Strong Buy","Buy", "Hold"]
 
-validated_list = zcalc.GetUndervaluedByRank(symbols, report_map, info_map, True, valid_ranks)
+validated_list = zcalc.GetUndervaluedByRank(successful_symbols, report_map, info_map, True, valid_ranks)
 
 print('\nResults:')
 if("Strong Buy" in valid_ranks):

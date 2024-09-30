@@ -40,11 +40,11 @@ def Zacks_AvgTargetPrice(symbol, company_report):
     
 # returns the percent the last price is under average target price for the given stock symbol
 def Calculate_LastPricePercentOfTarget(symbol, company_report):
+    percent = 0.0
     last_price = Zacks_LastPrice(symbol, company_report)
     target_price = Zacks_AvgTargetPrice(symbol, company_report)
-    percent = 0.0
     if not target_price == 0.0: # don't divide by zero please
-        percent = (1.0 - (last_price / target_price)) * 100.0     
+        percent = (1.0 - (last_price / target_price)) * 100.0
     return percent
     
 # returns the long term growth rate for the given stock symbol, not this is not available for many stocks
@@ -67,13 +67,22 @@ def GetUndervaluedByRank(symbols, zacks_company_reports_map, zacks_info_map={}, 
         zacks_rank = ""
         if(check_rank):
             zacks_info = zacks_info_map[symbol]
-            zacks_rank = zlist.Zacks_GetProperty(symbol, "zacks_rank_text", zacks_info)
-            if(not(zacks_rank in valid_ranks)):
-                passed_checks = False
+            if zacks_info:
+                try:
+                    zacks_rank = zlist.Zacks_GetProperty(symbol, "zacks_rank_text", zacks_info)
+                    if(not(zacks_rank in valid_ranks)):
+                        passed_checks = False
+                except Exception as err:
+                    print('Could not retreive Zacks rank for Symbol: ' + symbol, err)
 
         if(passed_checks):
             company_report = zacks_company_reports_map[symbol]
-            percentGrowthLeft = Calculate_LastPricePercentOfTarget(symbol, company_report)
+            try:
+                percentGrowthLeft = Calculate_LastPricePercentOfTarget(symbol, company_report)
+            except Exception as err:
+                percentGrowthLeft = 0.0
+                print("Coud not calculate Percent of Target for Symbol:" + symbol, err)
+
             if(not(percentGrowthLeft >= 15.0)):
                 passed_checks = False
         if(passed_checks):

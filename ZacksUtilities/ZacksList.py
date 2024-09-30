@@ -11,51 +11,66 @@ import os
 import pandas as pd
 import urllib.request
 import socket
+import time
+
+def retry(max_retries, wait_time):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            retries = 0
+            while retries < max_retries:
+                try:
+                    kwargs['url_timeout']=3
+                    result = func(*args, **kwargs)
+                    return result
+                except Exception as e:
+                    retries += 1
+                    time.sleep(wait_time)
+            else:
+              print('Max retries of function %s exceeded' % (func))
+              return ""
+        return wrapper
+    return decorator
 
 # return zacks info for the given symbol
-def Zacks_Info(symbol):
+@retry(max_retries=3, wait_time=1)
+def Zacks_Info(symbol, url_timeout=1):
     data_str = ""
     url = 'https://quote-feed.zacks.com/index?t='+symbol
     try:
-        downloaded_data  = urllib.request.urlopen(url, timeout=2)
+        downloaded_data  = urllib.request.urlopen(url, timeout=url_timeout)
         data = downloaded_data.read()
         data_str = data.decode()
     except urllib.error.HTTPError as err:
-        if isinstance(err.reason, socket.timeout):
-            print("HTTPError socket time out for: " + url)
-        else:
-            print(err.code + ": " + err.reason + " for" + url)
+        raise(err)
     except urllib.error.URLError as err:
-        if isinstance(err.reason, socket.timeout):
-            print("URLError socket time out for: " + url)
-        else:
-            print("URLError for" + url)
+        raise(err)
     except socket.timeout as err:
-        print("socket timed out - URL:" + url)
+        raise(err)
+    except Exception as err:
+        print(err)
+        raise(err)
     return data_str
     
 # return the company report, has more information, but takes longer to retrieve
-def Zacks_CompanyReport(symbol):
+@retry(max_retries=3, wait_time=1)
+def Zacks_CompanyReport(symbol, url_timeout=1):
     data_str = ""
     my_url = "https://www.zacks.com/stock/research/"+symbol+"/company-reports"
     headers = {'User-Agent':'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:23.0) Gecko/20100101 Firefox/23.0'}
     req = urllib.request.Request(url=my_url, headers=headers)
     try:
-        downloaded_data  = urllib.request.urlopen(req, timeout=2)
+        downloaded_data  = urllib.request.urlopen(req, timeout=url_timeout)
         data = downloaded_data.read()
         data_str = data.decode()
     except urllib.error.HTTPError as err:
-        if isinstance(e.reason, socket.timeout):
-            print("HTTPError socket time out for: " + my_url)
-        else:
-            print(err.code + ": " + err.reason + " for" + my_url)
+        raise(err)
     except urllib.error.URLError as err:
-        if isinstance(err.reason, socket.timeout):
-            print("URLError socket time out for: " + my_url)
-        else:
-            print(err.reason + " for" + my_url)
+        raise(err)
     except socket.timeout as err:
-        print("socket timed out - URL:" + my_url)
+        raise(err)
+    except Exception as err:
+        print(err)
+        raise(err)
     return data_str
 
 # Get a specific property from a zacks info string
@@ -98,16 +113,24 @@ def Zacks_GetRibbonData(symbol, ribbon_property, company_report):
 # Get the map of the Zack's info map for each of the given symbols.
 def GetZacksInfoMap(symbols):
     zacks_info_map = {}
+    failures = []
     for symbol in symbols:
         zacks_info_map[symbol] = Zacks_Info(symbol)
-    return zacks_info_map
+        if not zacks_info_map[symbol]:
+            failures.append(symbol)
+            print('info failure: ' + symbol)
+    return zacks_info_map, failures
 
 # Get the map of the symbols to their company report.
 def GetZacksCompanyReportMap(symbols):
     zacks_report_map = {}
+    failures = []
     for symbol in symbols:
         zacks_report_map[symbol] = Zacks_CompanyReport(symbol)
-    return zacks_report_map
+        if not zacks_report_map[symbol]:
+            failures.append(symbol)
+            print('report failure: ' + symbol)
+    return zacks_report_map, failures
 
 # Get the map of symbols to their Zacks specified property.
 def GetZacksPropertyMap(symbols, property_name):
